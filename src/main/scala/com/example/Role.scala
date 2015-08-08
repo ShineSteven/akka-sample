@@ -3,20 +3,12 @@ package com.example
 import scala.concurrent.duration.Duration
 import scala.concurrent.duration.DurationInt
 
-import akka.actor.Actor
-import akka.actor.ActorIdentity
-import akka.actor.ActorRef
+import akka.actor._
 import akka.actor.ActorSelection.toScala
-import akka.actor.Identify
-import akka.actor.OneForOneStrategy
-import akka.actor.PoisonPill
-import akka.actor.Props
 import akka.actor.SupervisorStrategy.Escalate
 import akka.actor.SupervisorStrategy.Restart
 import akka.actor.SupervisorStrategy.Resume
 import akka.actor.SupervisorStrategy.Stop
-import akka.actor.Terminated
-import akka.actor.actorRef2Scala
 import akka.routing.RoundRobinRoutingLogic
 import akka.routing.Router
 
@@ -161,6 +153,7 @@ class LookupReporter(penguins: Array[String]) extends Reporter {
 
       actor ! Interest
 
+
     case ActorIdentity(path, None) =>
       println(s"${path} not found")
   }
@@ -183,9 +176,9 @@ object LookupReporter {
 class PenguinKing(count: Int, reporter: ActorRef) extends Actor {
 
   override val supervisorStrategy = OneForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1 minute) {
-    //AllForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1 minute) {
+//    override val supervisorStrategy = AllForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1 minute) {
     case _: DontBotherMeException => Resume
-    case _: ExplodeException => Restart
+    case _: ExplodeException => Resume
     case _: IamGodException => Stop
     case _: Exception => Escalate
   }
@@ -225,9 +218,11 @@ object PenguinKing {
 
 /**
  * 企鵝總管
+ * routing
  */
 class PenguinManager extends Actor {
   var router = Router(RoundRobinRoutingLogic())
+//  var router = Router(akka.routing.RandomRoutingLogic())
 
   def receive: Actor.Receive = {
     case PenguinReady(actor) =>
@@ -251,8 +246,8 @@ class PenguinManager extends Actor {
       router.route(Hit, sender)
 
     case KillOne =>
-      router.routees(0).send(PoisonPill, self)
-
+//      router.routees(0).send(PoisonPill, self)
+      router.route(PoisonPill,sender)
     case _ =>
   }
   
